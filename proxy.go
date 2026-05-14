@@ -20,6 +20,11 @@ import (
 	"github.com/dependabot/proxy/internal/metrics"
 )
 
+const (
+	actionsInternalHost = ""
+	allowedDomain       = ""
+)
+
 type Proxy struct {
 	*goproxy.ProxyHttpServer
 	metricsClient *metrics.CollectorClient
@@ -57,6 +62,11 @@ func newProxy(envSettings config.ProxyEnvSettings, cfg *config.Config, blockedIp
 	proxy.OnRequest().HandleConnect(goproxy.AlwaysMitm)
 	proxy.OnRequest().DoFunc(normaliseHost)
 	proxy.OnRequest().DoFunc(blockMetadataAPIHosts)
+
+	if actionsInternalHost != "" {
+		externalNoop := handlers.NewExternalNoopHandler(actionsInternalHost, allowedDomain)
+		proxy.OnRequest().DoFunc(externalNoop.HandleRequest)
+	}
 	logger := NewRequestLogger()
 	proxy.OnRequest().DoFunc(logger.logRequest)
 	proxy.OnResponse().DoFunc(logger.logResponse)
